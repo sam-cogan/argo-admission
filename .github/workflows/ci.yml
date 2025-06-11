@@ -1,0 +1,97 @@
+name: Build and Test Demo App
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: demo-app/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: demo-app
+      run: npm ci
+    
+    - name: Run tests
+      working-directory: demo-app
+      run: npm test --if-present
+    
+    - name: Start application
+      working-directory: demo-app
+      run: |
+        npm start &
+        APP_PID=$!
+        sleep 5
+        
+        # Test health endpoint
+        curl -f http://localhost:3000/health || exit 1
+        
+        # Test ready endpoint  
+        curl -f http://localhost:3000/ready || exit 1
+        
+        # Test main endpoint
+        curl -f http://localhost:3000/ || exit 1
+        
+        # Test API endpoint
+        curl -f http://localhost:3000/api/info || exit 1
+        
+        kill $APP_PID
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker image
+      working-directory: demo-app
+      run: |
+        docker build -t demo-app:test .
+        
+    - name: Test Docker image
+      run: |
+        docker run -d -p 3000:3000 --name test-app demo-app:test
+        sleep 10
+        
+        # Test health endpoint
+        curl -f http://localhost:3000/health || exit 1
+        
+        # Test ready endpoint
+        curl -f http://localhost:3000/ready || exit 1
+        
+        # Cleanup
+        docker stop test-app
+        docker rm test-app
+
+  validate-k8s:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install kubeval
+      run: |
+        wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+        tar xf kubeval-linux-amd64.tar.gz
+        sudo mv kubeval /usr/local/bin
+    
+    - name: Validate Kubernetes manifests
+      run: |
+        find manifests -name "*.yaml" -exec kubeval {} \;

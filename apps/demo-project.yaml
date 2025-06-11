@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: demo-project
+  namespace: argocd
+spec:
+  description: Demo project for Argo CD showcase
+  sourceRepos:
+  - 'https://github.com/your-username/argo-admission.git'  # Update this to your repo URL
+  - 'https://charts.helm.sh/stable'
+  destinations:
+  - namespace: 'demo*'
+    server: https://kubernetes.default.svc
+  - namespace: argocd
+    server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+  - group: ''
+    kind: PersistentVolume
+  - group: rbac.authorization.k8s.io
+    kind: ClusterRole
+  - group: rbac.authorization.k8s.io
+    kind: ClusterRoleBinding
+  namespaceResourceWhitelist:
+  - group: ''
+    kind: ConfigMap
+  - group: ''
+    kind: Secret
+  - group: ''
+    kind: Service
+  - group: ''
+    kind: PersistentVolumeClaim
+  - group: apps
+    kind: Deployment
+  - group: apps
+    kind: ReplicaSet
+  - group: apps
+    kind: StatefulSet
+  - group: networking.k8s.io
+    kind: Ingress
+  roles:
+  - name: demo-admin
+    description: Admin role for demo project
+    policies:
+    - p, proj:demo-project:demo-admin, applications, *, demo-project/*, allow
+    - p, proj:demo-project:demo-admin, repositories, *, *, allow
+    groups:
+    - demo-admins
