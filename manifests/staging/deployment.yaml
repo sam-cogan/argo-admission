@@ -1,5 +1,9 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: apps/v1      containers:
+      - name: demo-app
+        image: ghcr.io/samcorrea/argo-admission/argo-demo-app:latest
+        ports:
+        - containerPort: 3000
+          name: httpeployment
 metadata:
   name: demo-app
   namespace: demo-staging
@@ -21,7 +25,7 @@ spec:
       - name: demo-app
         image: node:18-alpine
         command: ["/bin/sh"]
-        args: ["-c", "cd /app && npm install && npm start"]
+        args: ["-c", "cp -r /app-source/* /app/ && cd /app && npm install && npm start"]
         ports:
         - containerPort: 3000
           name: http
@@ -65,10 +69,3 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
-        volumeMounts:
-        - name: app-source
-          mountPath: /app
-      volumes:
-      - name: app-source
-        configMap:
-          name: demo-app-source

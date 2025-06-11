@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/your-username/argo-admission.git  # Update this to your repo URL
+    repoURL: https://github.com/sam-cogan/argo-admission.git  # Update this to your repo URL
     targetRevision: HEAD
     path: manifests/dev
   destination:

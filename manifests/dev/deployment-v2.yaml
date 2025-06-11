@@ -1,25 +1,39 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demo-app
+  name: demo-app-v2
   namespace: demo
   labels:
-    app: demo-app
+    app: demo-app-v2
     environment: development
+    version: v2
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: demo-app
+      app: demo-app-v2
   template:
     metadata:
       labels:
-        app: demo-app
+        app: demo-app-v2
         environment: development
+        version: v2
     spec:
+      initContainers:
+      - name: setup
+        image: node:18-alpine
+        command: ["/bin/sh"]
+        args: ["-c", "cp -r /app-source/* /app/ && cd /app && npm install --production"]
+        volumeMounts:
+        - name: app-source
+          mountPath: /app-source
+        - name: app-workdir
+          mountPath: /app
       containers:
       - name: demo-app
-        image: ghcr.io/samcorrea/argo-admission/argo-demo-app:latest
+        image: node:18-alpine
+        command: ["/bin/sh"]
+        args: ["-c", "cd /app && npm start"]
         ports:
         - containerPort: 3000
           name: http
@@ -51,7 +65,7 @@ spec:
           httpGet:
             path: /health
             port: 3000
-          initialDelaySeconds: 30
+          initialDelaySeconds: 45
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
@@ -59,7 +73,16 @@ spec:
           httpGet:
             path: /ready
             port: 3000
-          initialDelaySeconds: 5
+          initialDelaySeconds: 15
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+        volumeMounts:
+        - name: app-workdir
+          mountPath: /app
+      volumes:
+      - name: app-source
+        configMap:
+          name: demo-app-source
+      - name: app-workdir
+        emptyDir: {}
