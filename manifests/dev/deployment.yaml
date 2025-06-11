@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: demo-app
-        image: ghcr.io/samcorrea/argo-admission/argo-demo-app:latest
+        image: ghcr.io/sam-cogan/argo-admission/argo-demo-app:latest
         ports:
         - containerPort: 3000
           name: http
