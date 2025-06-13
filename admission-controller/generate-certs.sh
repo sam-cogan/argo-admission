@@ -62,9 +62,9 @@ echo "📋 CA Bundle for webhook configuration:"
 echo "$CA_BUNDLE"
 
 # Update webhook configuration with CA bundle
-if [ -f "../manifests/webhook-config.yaml" ]; then
+if [ -f "manifests/webhook-config.yaml" ]; then
     # Create updated webhook config with CA bundle
-    cat > ../manifests/webhook-config-with-ca.yaml << EOF
+    cat > manifests/webhook-config-with-ca.yaml << EOF
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionWebhook
 metadata:
