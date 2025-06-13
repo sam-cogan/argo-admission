@@ -8,6 +8,7 @@ metadata:
   labels:
     app: demo-app
     environment: development
+    team: demo-team
 spec:
   selector:
     app: demo-app
