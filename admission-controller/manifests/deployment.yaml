@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admission-controller
+  namespace: admission-controller
+  labels:
+    app: admission-controller
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: admission-controller
+  template:
+    metadata:
+      labels:
+        app: admission-controller
+    spec:
+      serviceAccountName: admission-controller
+      containers:
+      - name: admission-controller
+        image: ghcr.io/samcorrea/argo-admission/admission-controller:latest
+        ports:
+        - containerPort: 8443
+          name: webhook-api
+        env:
+        - name: PORT
+          value: "8443"
+        - name: TLS_CERT_PATH
+          value: "/etc/certs/tls.crt"
+        - name: TLS_KEY_PATH
+          value: "/etc/certs/tls.key"
+        # Optional: Configure external service
+        # - name: EXTERNAL_SERVICE_URL
+        #   value: "https://your-change-management-api.com"
+        # - name: EXTERNAL_SERVICE_API_KEY
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: external-service-credentials
+        #       key: api-key
+        volumeMounts:
+        - name: certs
+          mountPath: /etc/certs
+          readOnly: true
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: certs
+        secret:
+          secretName: admission-controller-certs
