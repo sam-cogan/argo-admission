@@ -26,6 +26,7 @@ openssl req -new -key server.key -subj "/C=US/ST=CA/L=San Francisco/O=Company/CN
 
 # Create extensions file for SAN
 cat > server.ext << EOF
+[v3_req]
 authorityKeyIdentifier=keyid,issuer:always
 basicConstraints=CA:FALSE
 keyUsage=keyEncipherment,dataEncipherment

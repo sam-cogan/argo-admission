@@ -18,7 +18,7 @@ spec:
       serviceAccountName: admission-controller
       containers:
       - name: admission-controller
-        image: ghcr.io/samcorrea/argo-admission/admission-controller:latest
+        image: ghcr.io/sam-cogan/argo-admission/argo-admission-controller:latest
         ports:
         - containerPort: 8443
           name: webhook-api
