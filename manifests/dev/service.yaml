@@ -3,9 +3,12 @@ kind: Service
 metadata:
   name: demo-app-service
   namespace: demo
+  annotations:
+    change.company.com/id: "CHG-2025-000"
   labels:
     app: demo-app
     environment: development
+    team: demo-team
 spec:
   selector:
     app: demo-app
