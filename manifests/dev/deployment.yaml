@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: demo-app
   namespace: demo
+  annotations:
+    change.company.com/id: "CHG-2025-001"
   labels:
     app: demo-app
     environment: development
