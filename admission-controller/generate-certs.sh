@@ -49,9 +49,10 @@ echo "✅ Certificates generated successfully!"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
 # Create or update secret with certificates
-kubectl create secret tls "$SECRET_NAME" \
-    --cert=server.crt \
-    --key=server.key \
+kubectl create secret generic "$SECRET_NAME" \
+    --from-file=tls.crt=server.crt \
+    --from-file=tls.key=server.key \
+    --from-file=ca.crt=ca.crt \
     --namespace="$NAMESPACE" \
     --dry-run=client -o yaml | kubectl apply -f -
 
