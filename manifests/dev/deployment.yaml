@@ -4,7 +4,7 @@ metadata:
   name: demo-app
   namespace: demo
   annotations:
-    change.company.com/id: "CHG-2025-000"
+    change.company.com/id: "CHG-2025-999"
   labels:
     app: demo-app
     environment: development
