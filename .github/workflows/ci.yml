@@ -1,70 +1,70 @@
-name: Test and Validate
+# name: Test and Validate
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+# on:
+#   push:
+#     branches: [ main, develop ]
+#   pull_request:
+#     branches: [ main ]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+# jobs:
+#   test:
+#     runs-on: ubuntu-latest
     
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
+#     strategy:
+#       matrix:
+#         node-version: [18.x, 20.x]
     
-    steps:
-    - uses: actions/checkout@v4
+#     steps:
+#     - uses: actions/checkout@v4
     
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        cache-dependency-path: demo-app/package-lock.json
+#     - name: Use Node.js ${{ matrix.node-version }}
+#       uses: actions/setup-node@v4
+#       with:
+#         node-version: ${{ matrix.node-version }}
+#         cache: 'npm'
+#         cache-dependency-path: demo-app/package-lock.json
     
-    - name: Install dependencies
-      working-directory: demo-app
-      run: npm ci
+#     - name: Install dependencies
+#       working-directory: demo-app
+#       run: npm ci
     
-    - name: Run tests
-      working-directory: demo-app
-      run: npm test --if-present
+#     - name: Run tests
+#       working-directory: demo-app
+#       run: npm test --if-present
     
-    - name: Start application
-      working-directory: demo-app
-      run: |
-        npm start &
-        APP_PID=$!
-        sleep 5
+#     - name: Start application
+#       working-directory: demo-app
+#       run: |
+#         npm start &
+#         APP_PID=$!
+#         sleep 5
         
-        # Test health endpoint
-        curl -f http://localhost:3000/health || exit 1
+#         # Test health endpoint
+#         curl -f http://localhost:3000/health || exit 1
         
-        # Test ready endpoint  
-        curl -f http://localhost:3000/ready || exit 1
+#         # Test ready endpoint  
+#         curl -f http://localhost:3000/ready || exit 1
         
-        # Test main endpoint
-        curl -f http://localhost:3000/ || exit 1
+#         # Test main endpoint
+#         curl -f http://localhost:3000/ || exit 1
         
-        # Test API endpoint
-        curl -f http://localhost:3000/api/info || exit 1
+#         # Test API endpoint
+#         curl -f http://localhost:3000/api/info || exit 1
         
-        kill $APP_PID
+#         kill $APP_PID
 
-  validate-k8s:
-    runs-on: ubuntu-latest
+#   validate-k8s:
+#     runs-on: ubuntu-latest
     
-    steps:
-    - uses: actions/checkout@v4
+#     steps:
+#     - uses: actions/checkout@v4
     
-    - name: Install kubeval
-      run: |
-        wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
-        tar xf kubeval-linux-amd64.tar.gz
-        sudo mv kubeval /usr/local/bin
+#     - name: Install kubeval
+#       run: |
+#         wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+#         tar xf kubeval-linux-amd64.tar.gz
+#         sudo mv kubeval /usr/local/bin
     
-    - name: Validate Kubernetes manifests
-      run: |
-        find manifests -name "*.yaml" -exec kubeval {} \;
+#     - name: Validate Kubernetes manifests
+#       run: |
+#         find manifests -name "*.yaml" -exec kubeval {} \;

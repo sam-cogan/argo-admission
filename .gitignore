@@ -114,3 +114,4 @@ argocd-password.txt
 # Build artifacts
 dist/
 build/
+blog-article.md

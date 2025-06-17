@@ -1,10 +1,11 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Images
 
 on:
   push:
     branches: [ main, develop ]
     paths:
       - 'demo-app/**'
+      - 'admission-controller/**'
       - '.github/workflows/docker-build.yml'
     tags:
       - 'v*'
@@ -12,10 +13,10 @@ on:
     branches: [ main ]
     paths:
       - 'demo-app/**'
+      - 'admission-controller/**'
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/argo-demo-app
 
 jobs:
   build:
@@ -23,6 +24,20 @@ jobs:
     permissions:
       contents: read
       packages: write
+    
+    strategy:
+      matrix:
+        component:
+          - name: demo-app
+            context: ./demo-app
+            image: argo-demo-app
+            description: Demo Node.js application for Argo CD deployment
+            test: true
+          - name: admission-controller
+            context: ./admission-controller
+            image: argo-admission-controller
+            description: Kubernetes admission controller for Argo CD
+            test: false
 
     steps:
     - name: Checkout repository
@@ -39,7 +54,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.component.image }}
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -48,8 +63,8 @@ jobs:
           type=sha,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
         labels: |
-          org.opencontainers.image.title=Argo CD Demo App
-          org.opencontainers.image.description=Demo Node.js application for Argo CD deployment
+          org.opencontainers.image.title=${{ matrix.component.image }}
+          org.opencontainers.image.description=${{ matrix.component.description }}
           org.opencontainers.image.vendor=Argo CD Demo
 
     - name: Set up Docker Buildx
@@ -58,44 +73,38 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: ./demo-app
+        context: ${{ matrix.component.context }}
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: linux/amd64,linux/arm64
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: type=gha,scope=${{ matrix.component.name }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.component.name }}
 
     - name: Output image information
       if: github.event_name != 'pull_request'
       run: |
-        echo "🐳 Docker image has been built and pushed!"
+        echo "🐳 Docker image for ${{ matrix.component.name }} has been built and pushed!"
         echo "📋 Image tags:"
         echo "${{ steps.meta.outputs.tags }}" | while read tag; do
           echo "  • $tag"
         done
         echo ""
-        echo "🔧 To update your Kubernetes deployment:"
-        LATEST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep ":latest" || echo "${{ steps.meta.outputs.tags }}" | head -1)
-        echo "  kubectl set image deployment/demo-app demo-app=$LATEST_TAG -n demo"
-        echo ""
-        echo "📝 Or update your Argo CD application manifest to use:"
-        echo "  image: $LATEST_TAG"
+        if [ "${{ matrix.component.name }}" = "demo-app" ]; then
+          echo "🔧 To update your Kubernetes deployment:"
+          LATEST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep ":latest" || echo "${{ steps.meta.outputs.tags }}" | head -1)
+          echo "  kubectl set image deployment/demo-app demo-app=$LATEST_TAG -n demo"
+          echo ""
+          echo "📝 Or update your Argo CD application manifest to use:"
+          echo "  image: $LATEST_TAG"
+        elif [ "${{ matrix.component.name }}" = "admission-controller" ]; then
+          echo "🔧 To update the admission controller deployment:"
+          LATEST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep ":latest" || echo "${{ steps.meta.outputs.tags }}" | head -1)
+          echo "  kubectl set image deployment/admission-controller admission-controller=$LATEST_TAG -n admission-controller"
+        fi
 
-    # Optional: Auto-update manifests (commented out by default)
-    # - name: Update Kubernetes manifests
-    #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    #   run: |
-    #     LATEST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep ":latest")
-    #     sed -i "s|image: ghcr.io.*|image: $LATEST_TAG|g" manifests/*/deployment.yaml
-    #     git config --local user.email "action@github.com"
-    #     git config --local user.name "GitHub Action"
-    #     git add manifests/*/deployment.yaml
-    #     git commit -m "Update image to $LATEST_TAG" || exit 0
-    #     git push
-
-    - name: Test Docker image
-      if: github.event_name == 'pull_request'
+    - name: Test demo-app Docker image
+      if: matrix.component.test && github.event_name == 'pull_request'
       run: |
         # Pull the built image for testing
         TEST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
@@ -122,3 +131,31 @@ jobs:
         # Cleanup
         docker stop test-app
         docker rm test-app
+
+    - name: Test admission-controller Docker image
+      if: matrix.component.name == 'admission-controller' && github.event_name == 'pull_request'
+      run: |
+        # Pull the built image for testing
+        TEST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
+        docker pull $TEST_TAG
+        
+        # Run a basic container test (just verify it starts and has the binary)
+        docker run --rm $TEST_TAG ls -la /root/admission-controller || exit 1
+        
+        echo "✅ Admission controller image test passed"
+
+    # Optional: Auto-update manifests (commented out by default)
+    # - name: Update Kubernetes manifests
+    #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    #   run: |
+    #     LATEST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep ":latest")
+    #     if [ "${{ matrix.component.name }}" = "demo-app" ]; then
+    #       sed -i "s|image: ghcr.io.*/argo-demo-app.*|image: $LATEST_TAG|g" manifests/*/deployment.yaml
+    #     elif [ "${{ matrix.component.name }}" = "admission-controller" ]; then
+    #       sed -i "s|image: ghcr.io.*/argo-admission-controller.*|image: $LATEST_TAG|g" admission-controller/manifests/deployment.yaml
+    #     fi
+    #     git config --local user.email "action@github.com"
+    #     git config --local user.name "GitHub Action"
+    #     git add manifests/*/deployment.yaml admission-controller/manifests/deployment.yaml || true
+    #     git commit -m "Update ${{ matrix.component.name }} image to $LATEST_TAG" || exit 0
+    #     git push

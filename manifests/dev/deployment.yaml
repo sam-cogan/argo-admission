@@ -3,11 +3,13 @@ kind: Deployment
 metadata:
   name: demo-app
   namespace: demo
+  annotations:
+    change.company.com/id: "CHG-2025-001"
   labels:
     app: demo-app
     environment: development
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: demo-app

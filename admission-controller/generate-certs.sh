@@ -26,6 +26,7 @@ openssl req -new -key server.key -subj "/C=US/ST=CA/L=San Francisco/O=Company/CN
 
 # Create extensions file for SAN
 cat > server.ext << EOF
+[v3_req]
 authorityKeyIdentifier=keyid,issuer:always
 basicConstraints=CA:FALSE
 keyUsage=keyEncipherment,dataEncipherment
@@ -48,9 +49,10 @@ echo "✅ Certificates generated successfully!"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
 # Create or update secret with certificates
-kubectl create secret tls "$SECRET_NAME" \
-    --cert=server.crt \
-    --key=server.key \
+kubectl create secret generic "$SECRET_NAME" \
+    --from-file=tls.crt=server.crt \
+    --from-file=tls.key=server.key \
+    --from-file=ca.crt=ca.crt \
     --namespace="$NAMESPACE" \
     --dry-run=client -o yaml | kubectl apply -f -
 
@@ -61,9 +63,9 @@ echo "📋 CA Bundle for webhook configuration:"
 echo "$CA_BUNDLE"
 
 # Update webhook configuration with CA bundle
-if [ -f "../manifests/webhook-config.yaml" ]; then
+if [ -f "manifests/webhook-config.yaml" ]; then
     # Create updated webhook config with CA bundle
-    cat > ../manifests/webhook-config-with-ca.yaml << EOF
+    cat > manifests/webhook-config-with-ca.yaml << EOF
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionWebhook
 metadata:
