@@ -171,9 +171,9 @@ func (ac *AdmissionController) admit(w http.ResponseWriter, r *http.Request) {
 	// Extract change ID from annotations
 	changeID := extractChangeID(req)
 	if changeID == "" {
-		// Allow resources without change ID annotation (may not be Argo CD managed)
-		klog.Infof("No change ID found, allowing request")
-		ac.respond(w, &admissionReview, true, "No change ID annotation found")
+		// Reject resources without change ID annotation
+		klog.Infof("No change ID found, rejecting request")
+		ac.respond(w, &admissionReview, false, "Change ID annotation is required")
 		return
 	}
 
